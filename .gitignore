@@ -1,0 +1,7 @@
+.env
+.venv/
+__pycache__/
+leads.csv
+*.db
+*.db-shm
+*.db-wal

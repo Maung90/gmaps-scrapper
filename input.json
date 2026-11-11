@@ -1,0 +1,42 @@
+{
+  "searchStringsArray": [
+    "villa management",
+    "natural restaurant",
+    "eco-friendly cafe",
+    "natural home decor store",
+    "interior design store"
+  ],
+  "locationQuery": "Ubud, Bali, Indonesia",
+  "maxCrawledPlacesPerSearch": 30,
+  "language": "id",
+  "searchMatching": "all",
+  "placeMinimumStars": "",
+  "website": "allPlaces",
+  "skipClosedPlaces": true,
+  "scrapePlaceDetailPage": true,
+  "scrapeTableReservationProvider": false,
+  "scrapeOrderOnline": false,
+  "includeWebResults": false,
+  "scrapeDirectories": false,
+  "maxQuestions": 0,
+  "scrapeContacts": true,
+  "scrapeSocialMediaProfiles": {
+    "facebooks": false,
+    "instagrams": false,
+    "youtubes": false,
+    "tiktoks": false,
+    "twitters": false
+  },
+  "maximumLeadsEnrichmentRecords": 0,
+  "leadsEnrichmentDepartments": [
+    "sales",
+    "marketing"
+  ],
+  "verifyLeadsEnrichmentEmails": false,
+  "maxReviews": 0,
+  "scrapeReviewsPersonalData": false,
+  "maxImages": 0,
+  "scrapeImageAuthors": false,
+  "enableCompetitorAnalysis": false,
+  "maxCompetitorsToAnalyze": 0
+}
