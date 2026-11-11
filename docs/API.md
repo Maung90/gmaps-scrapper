@@ -14,6 +14,71 @@ Contoh PowerShell:
 $headers = @{ "X-API-Key" = "secret_anda" }
 ```
 
+## Token Apify dari klien
+
+Secara default server memakai `APIFY_TOKEN` dari `.env`. Bila ingin memakai token lain
+(misalnya karena kuota akun utama habis), kirim token pada header tambahan:
+
+```http
+X-Apify-Token: apify_api_xxxxxxxxxxxxxxxxxxxx
+```
+
+Beberapa token dapat dikirim sekaligus dengan pemisah koma; server memilih token pertama
+yang valid dan belum mencapai batas pemakaian bulanan.
+
+```http
+X-Apify-Token: apify_api_tokenPertama, apify_api_tokenKedua
+```
+
+Aturan penting:
+
+- Token dikirim lewat **header**, bukan body. Body permintaan disimpan apa adanya di
+  `request_json` dan dikembalikan oleh `GET /api/v1/jobs`, sehingga token di body akan bocor.
+- Token hanya disimpan di memori proses, dipakai sekali untuk satu job, lalu dihapus. Token
+  tidak ditulis ke database, tidak masuk log, dan tidak dikembalikan ke klien (hanya 4
+  karakter terakhir yang ditampilkan).
+- Maksimal 5 token per permintaan, masing-masing 20–200 karakter tanpa spasi.
+- Bila header tidak diisi, server memakai `APIFY_TOKEN` dari `.env`. Bila keduanya tidak ada,
+  `POST /api/v1/jobs` mengembalikan `503`.
+- Respons pembuatan job memuat `token_source`: `dashboard` atau `server`.
+
+### Memeriksa token
+
+```http
+POST /api/v1/apify-tokens/check
+Content-Type: application/json
+X-API-Key: <api-key>
+```
+
+```json
+{ "token": "apify_api_xxxxxxxxxxxxxxxxxxxx" }
+```
+
+Contoh respons:
+
+```json
+{
+  "tokens": [
+    {
+      "token": "…xxxx",
+      "valid": true,
+      "username": "nama_akun",
+      "plan": "Personal",
+      "usage_usd": 12.5,
+      "limit_usd": 49,
+      "cycle_end_at": "2026-12-01T23:59:59.999Z",
+      "exhausted": false,
+      "error": ""
+    }
+  ],
+  "usable": true
+}
+```
+
+Endpoint ini hanya membaca `GET /users/me` dan `GET /users/me/limits` milik Apify dan tidak
+menjalankan Actor, sehingga tidak menimbulkan biaya scraping. Nilai `exhausted: true` berarti
+pemakaian bulanan sudah menyentuh `maxMonthlyUsageUsd`.
+
 ## Health
 
 ```http
@@ -31,14 +96,6 @@ Respons:
 }
 ```
 
-## Daftar saran niche
-
-```http
-GET /api/v1/niches
-```
-
-Mengembalikan pilihan kata kunci awal. Nilai `search_term` dapat dikirim sebagai elemen `niches` saat membuat job. Anda juga dapat mengirim kata kunci sendiri.
-
 ## Membuat job pencarian
 
 ```http
@@ -51,11 +108,7 @@ Payload:
 
 ```json
 {
-  "niches": [
-    "villa management",
-    "natural concept restaurant",
-    "interior home decor store"
-  ],
+  "keyword": "coffee shop",
   "location": "Ubud, Bali, Indonesia",
   "max_results": 50,
   "language": "id",
@@ -66,7 +119,7 @@ Payload:
 
 | Field | Tipe | Wajib | Aturan |
 |---|---|---:|---|
-| `niches` | array string | ya | 1–10 kata kunci; setiap item maksimum 100 karakter |
+| `keyword` | string | ya | Keyword/frasa pencarian bebas, 1–200 karakter; digunakan sebagai satu-satunya pencarian Actor |
 | `location` | string | ya | 2–200 karakter, misalnya kota/daerah dan negara |
 | `max_results` | integer | tidak | batas hasil unik keseluruhan, 1–500; default 50 |
 | `language` | string | tidak | bahasa pencarian, default `id` |
@@ -79,18 +132,19 @@ Respons `202 Accepted`:
 {
   "job_id": "uuid",
   "status": "queued",
+  "token_source": "dashboard",
   "status_url": "/api/v1/jobs/uuid",
   "results_url": "/api/v1/jobs/uuid/leads"
 }
 ```
 
-Setiap job membagi `max_results` secara rata ke jumlah niche untuk menentukan batas hasil per pencarian Actor. Karena itu jumlah hasil akhir dapat lebih kecil akibat ketersediaan hasil atau duplikasi. Maksimum 10 job berstatus menunggu/berjalan pada satu waktu; setelah batas tersebut API mengembalikan `429`.
+Keyword dikirim langsung sebagai satu item `searchStringsArray` ke Actor; `max_results` menjadi batas hasil untuk pencarian tersebut. Jumlah hasil akhir dapat lebih kecil dari batas jika hasil yang tersedia terbatas. Maksimum 10 job berstatus menunggu/berjalan pada satu waktu; setelah batas tersebut API mengembalikan `429`.
 
 Contoh:
 
 ```powershell
 $body = @{
-  niches = @("villa management", "natural concept restaurant")
+  keyword = "coffee shop"
   location = "Ubud, Bali, Indonesia"
   max_results = 40
   language = "id"
@@ -131,7 +185,7 @@ Contoh respons:
   "created_at": "2026-10-27T09:00:00+00:00",
   "updated_at": "2026-10-27T09:04:00+00:00",
   "request": {
-    "niches": ["villa management"],
+    "keyword": "villa management",
     "location": "Ubud, Bali, Indonesia",
     "max_results": 40,
     "language": "id",
@@ -237,7 +291,7 @@ Invoke-RestMethod `
 | `404` | Job tidak ditemukan |
 | `409` | Hasil job belum siap |
 | `429` | Batas job aktif/menunggu tercapai |
-| `503` | `API_KEY` atau `APIFY_TOKEN` belum dikonfigurasi |
+| `503` | `API_KEY` belum valid, atau tidak ada token Apify (header maupun `.env`) |
 | `422` | Payload tidak valid |
 
 Kesalahan job Apify dikembalikan pada field `error` di status job. Jangan mengirim token Apify ke klien; token tersebut hanya digunakan oleh server.

@@ -44,7 +44,7 @@ def create_app() -> FastAPI:
             allow_origins=cors_origins,
             allow_credentials=False,
             allow_methods=["GET", "POST", "DELETE"],
-            allow_headers=["Content-Type", "X-API-Key"],
+            allow_headers=["Content-Type", "X-API-Key", "X-Apify-Token"],
         )
 
     app.include_router(router, prefix="/api/v1")
@@ -53,26 +53,28 @@ def create_app() -> FastAPI:
     def health():
         return {"status": "ok", "service": "natural-decor-prospecting-api"}
 
-    # Sajikan dashboard statis (hanya index.html dan leads.csv) agar cukup satu server.
+    # Sajikan dashboard statis agar cukup satu server.
     # Jangan mount seluruh folder proyek: .env dan leads.db akan ikut terekspos.
     @app.get("/", include_in_schema=False)
-    def dashboard():
-        return _serve_static("index.html")
+    def frontend():
+        return _serve_static(Path("static") / "index.html")
 
+    @app.get("/dashboard", include_in_schema=False)
     @app.get("/index.html", include_in_schema=False)
-    def dashboard_html():
-        return _serve_static("index.html")
+    def dashboard():
+        return _serve_static(Path("index.html"))
 
     @app.get("/leads.csv", include_in_schema=False)
     def dashboard_data():
-        return _serve_static("leads.csv")
+        return _serve_static(Path("leads.csv"))
 
     return app
 
 
-def _serve_static(filename: str):
-    path = Path(BASE_DIR) / filename
-    if not path.is_file():
+def _serve_static(relative_path: Path):
+    path = (Path(BASE_DIR) / relative_path).resolve()
+    # Tolak path yang keluar dari folder proyek.
+    if BASE_DIR not in path.parents or not path.is_file():
         raise HTTPException(status_code=404, detail="File tidak ditemukan.")
     return FileResponse(path)
 

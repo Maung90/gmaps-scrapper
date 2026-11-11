@@ -6,37 +6,73 @@ import json
 import os
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 
+from .apify import mask_token, probe_account, split_tokens
 from .config import CSV_FIELDS, MAX_OUTSTANDING_JOBS
 from .db import get_connection, utc_now
 from .jobs import get_job_or_404, run_search, serialize_job
-from .models import SearchRequest
+from . import tokens
+from .models import SearchRequest, TokenCheckRequest
 from .security import require_api_key
 
 router = APIRouter()
 
 
-@router.get("/niches", dependencies=[Depends(require_api_key)])
-def list_niches():
+@router.post("/apify-tokens/check", dependencies=[Depends(require_api_key)])
+def check_apify_tokens(payload: TokenCheckRequest):
+    """Periksa token Apify dari dashboard tanpa menyimpannya di server."""
+    try:
+        tokens = split_tokens(payload.token)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    results = []
+    for token in tokens:
+        info = probe_account(token, force=True)
+        results.append(
+            {
+                "token": mask_token(token),
+                "valid": info["valid"],
+                "username": info["username"],
+                "plan": info["plan"],
+                "usage_usd": info["usage_usd"],
+                "limit_usd": info["limit_usd"],
+                "cycle_end_at": info["cycle_end_at"],
+                "exhausted": info["exhausted"],
+                "error": info["error"],
+            }
+        )
     return {
-        "niches": [
-            {"id": "villa_management", "label": "Manajemen villa", "search_term": "villa management"},
-            {"id": "hotel_resort", "label": "Hotel dan resort", "search_term": "boutique hotel resort"},
-            {"id": "natural_restaurant", "label": "Restoran natural", "search_term": "natural concept restaurant"},
-            {"id": "cafe", "label": "Kafe", "search_term": "natural concept cafe"},
-            {"id": "interior_retail", "label": "Retail interior", "search_term": "interior home decor store"},
-            {"id": "custom", "label": "Niche khusus", "search_term": "isi sesuai target"},
-        ],
-        "note": "Kirim search_term sebagai nilai niches pada endpoint pencarian.",
+        "tokens": results,
+        # Dashboard memakai ini untuk menonaktifkan tombol tanpa menebak-nebak.
+        "usable": any(item["valid"] and not item["exhausted"] for item in results),
     }
 
 
 @router.post("/jobs", status_code=202, dependencies=[Depends(require_api_key)])
-def create_job(search: SearchRequest, request: Request):
-    token = os.getenv("APIFY_TOKEN", "").strip()
-    if not token:
-        raise HTTPException(status_code=503, detail="APIFY_TOKEN belum dikonfigurasi.")
+def create_job(
+    search: SearchRequest,
+    request: Request,
+    x_apify_token: str | None = Header(default=None, alias="X-Apify-Token"),
+):
+    # Token Apify dari header, bukan dari body: `request_json` dikembalikan apa adanya
+    # oleh GET /jobs, sehingga token di body akan bocor ke setiap pembaca daftar job.
+    supplied_tokens = []
+    if x_apify_token:
+        try:
+            supplied_tokens = split_tokens(x_apify_token)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    if not supplied_tokens and not os.getenv("APIFY_TOKEN", "").strip():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Token Apify belum tersedia. Isi token Apify di dashboard "
+                "atau set APIFY_TOKEN di environment server."
+            ),
+        )
     with get_connection() as connection:
         outstanding = connection.execute(
             "SELECT COUNT(*) FROM jobs WHERE status IN ('queued', 'running')"
@@ -57,10 +93,17 @@ def create_job(search: SearchRequest, request: Request):
             (job_id, search.model_dump_json(), now, now),
         )
 
-    request.app.state.executor.submit(run_search, job_id, search)
+    # Simpan token hanya di memori, sekali pakai, dan jangan pernah ke database.
+    tokens.put(job_id, supplied_tokens)
+    try:
+        request.app.state.executor.submit(run_search, job_id, search)
+    except Exception:
+        tokens.discard(job_id)
+        raise
     return {
         "job_id": job_id,
         "status": "queued",
+        "token_source": "dashboard" if supplied_tokens else "server",
         "status_url": f"/api/v1/jobs/{job_id}",
         "results_url": f"/api/v1/jobs/{job_id}/leads",
     }

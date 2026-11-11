@@ -5,7 +5,16 @@ import os
 
 from fastapi import HTTPException
 
-from .apify import fetch_dataset, lead_identity, normalize_lead, run_actor
+from . import tokens
+from .apify import (
+    ApifyAuthError,
+    ApifyQuotaError,
+    fetch_dataset,
+    lead_identity,
+    normalize_lead,
+    run_actor,
+    select_token,
+)
 from .db import get_connection, utc_now
 
 
@@ -30,20 +39,61 @@ def update_job(job_id, status, *, run_id=None, result_count=None, error=None):
         )
 
 
+def resolve_tokens(job_id):
+    """Tentukan token Apify untuk job: token dari dashboard, atau APIFY_TOKEN di .env.
+
+    Token dari dashboard bersifat sekali pakai dan tidak pernah disimpan ke database.
+    """
+    supplied = tokens.take(job_id)
+    if not supplied:
+        fallback = os.getenv("APIFY_TOKEN", "").strip()
+        return [fallback] if fallback else []
+
+    chosen, statuses = select_token(supplied)
+    if chosen:
+        return [chosen]
+
+    # Tidak ada token yang bisa dipakai: susun pesan yang menjelaskan sebabnya.
+    reasons = []
+    for status in statuses:
+        if not status["valid"]:
+            reasons.append(f"token {status['token']} ditolak")
+        elif status["exhausted"]:
+            reasons.append(f"token {status['token']} kuotanya habis")
+        else:
+            reasons.append(f"token {status['token']} tidak tersedia")
+    raise ApifyQuotaError(
+        "Tidak ada token Apify yang bisa dipakai: " + "; ".join(reasons) + "."
+    )
+
+
 def run_search(job_id, search):
     """Jalankan pencarian untuk sebuah job secara sinkron (dipanggil di executor)."""
-    token = os.getenv("APIFY_TOKEN", "").strip()
-    if not token:
-        update_job(job_id, "failed", error="APIFY_TOKEN belum dikonfigurasi.")
+    try:
+        candidates = resolve_tokens(job_id)
+    except ApifyQuotaError as exc:
+        update_job(
+            job_id,
+            "failed",
+            error=f"{exc} Perbarui token Apify di dashboard lalu jalankan ulang.",
+        )
+        return
+
+    if not candidates:
+        update_job(
+            job_id,
+            "failed",
+            error="Token Apify belum diisi. Masukkan token di dashboard atau set APIFY_TOKEN.",
+        )
         return
 
     try:
         update_job(job_id, "running")
-        run_id, dataset_id = run_actor(search, token)
+        run_id, dataset_id = run_actor(search, candidates[0])
         update_job(job_id, "running", run_id=run_id)
 
         unique_leads = {}
-        for item in fetch_dataset(dataset_id, token):
+        for item in fetch_dataset(dataset_id, candidates[0]):
             lead = normalize_lead(item)
             unique_leads.setdefault(lead_identity(lead), (lead, item))
             if len(unique_leads) >= search.max_results:
@@ -67,6 +117,9 @@ def run_search(job_id, search):
                 ],
             )
         update_job(job_id, "succeeded", result_count=len(unique_leads))
+    except (ApifyAuthError, ApifyQuotaError) as exc:
+        # Pesan ini tampil di kolom error job, jadi harus menjelaskan tindakan berikutnya.
+        update_job(job_id, "failed", error=f"{exc} Perbarui token Apify di dashboard lalu coba lagi.")
     except Exception as exc:
         update_job(job_id, "failed", error=str(exc))
 

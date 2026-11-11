@@ -1,0 +1,1464 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c110e">
+  <title>Prospek — Natural Decor</title>
+  <meta name="description" content="Ruang kerja untuk menjalankan pencarian bisnis di Google Maps dan meninjau prospeknya.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,600;9..144,700&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #0c110e;
+      --surface: #131a15;
+      --surface-2: #182019;
+      --line: #26312a;
+      --line-soft: #1e2821;
+      --text: #e9eddf;
+      --muted: #8d9b8e;
+      --dim: #6b7a6e;
+      --gold: #e0c58a;
+      --sage: #a9c4ac;
+      --clay: #d3775a;
+      --display: "Fraunces", Georgia, "Times New Roman", serif;
+      --body: "Karla", "Segoe UI", sans-serif;
+      --mono: "IBM Plex Mono", ui-monospace, monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(1100px 520px at 88% -14%, rgba(224, 197, 138, .10), transparent 70%),
+        radial-gradient(900px 460px at 4% 106%, rgba(169, 196, 172, .07), transparent 72%),
+        var(--ink);
+      color: var(--text);
+      font: 15px/1.55 var(--body);
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button, a, select, input { -webkit-tap-highlight-color: transparent; }
+    a { color: var(--sage); text-underline-offset: 3px; }
+    a:hover { color: var(--gold); }
+    :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+    .grain {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .38;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.25'/%3E%3C/svg%3E");
+    }
+    /* ---------- top bar ---------- */
+    .bar {
+      position: sticky; top: 0; z-index: 30;
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+      padding: 12px clamp(16px, 3vw, 40px);
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(12, 17, 14, .97), rgba(12, 17, 14, .82));
+      backdrop-filter: blur(16px);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; margin-right: auto; }
+    .brand-mark {
+      width: 33px; height: 33px; display: grid; place-items: center; flex: none;
+      border: 1px solid var(--gold); color: var(--gold);
+      border-radius: 50% 50% 50% 4px; transform: rotate(-10deg);
+    }
+    .brand-mark svg { transform: rotate(10deg); }
+    .brand-text { display: grid; line-height: 1.15; }
+    .brand-text b { font: 600 15px var(--display); letter-spacing: -.2px; }
+    .brand-text span {
+      color: var(--dim); font: 400 9px var(--mono);
+      letter-spacing: 1.5px; text-transform: uppercase;
+    }
+    .key-field { display: flex; align-items: center; gap: 8px; }
+    .key-field > label {
+      font: 500 9px var(--mono); letter-spacing: 1.4px; text-transform: uppercase; color: var(--dim);
+    }
+    .key-input {
+      width: 205px; height: 34px; padding: 0 11px;
+      background: #0e1410; border: 1px solid var(--line); border-radius: 2px;
+      font: 400 11.5px var(--mono);
+      transition: border-color .18s, box-shadow .18s;
+    }
+    .key-input::placeholder { color: #55635a; }
+    .key-input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(224, 197, 138, .12); }
+
+    .ghost-btn {
+      height: 34px; padding: 0 12px; display: inline-flex; align-items: center; gap: 7px;
+      background: transparent; border: 1px solid var(--line); border-radius: 2px;
+      color: var(--muted); font: 500 11.5px var(--body); cursor: pointer; white-space: nowrap;
+      text-decoration: none;
+      transition: color .18s, border-color .18s, background .18s;
+    }
+    .ghost-btn:hover:not([disabled]) { color: var(--text); border-color: #3a4a3f; background: rgba(255, 255, 255, .03); }
+    .ghost-btn[disabled] { opacity: .45; cursor: not-allowed; }
+    [hidden] { display: none !important; }
+
+    .status-chip {
+      display: inline-flex; align-items: center; gap: 7px;
+      font: 500 10px var(--mono); letter-spacing: .6px; color: var(--dim); white-space: nowrap;
+    }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); flex: none; }
+    .dot.ok { background: var(--sage); box-shadow: 0 0 0 4px rgba(169, 196, 172, .12); }
+    .dot.bad { background: var(--clay); box-shadow: 0 0 0 4px rgba(211, 119, 90, .14); }
+    .dot.wait { background: var(--gold); box-shadow: 0 0 0 4px rgba(224, 197, 138, .13); animation: pulse 1.8s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: .35; } }
+    /* ---------- layout ---------- */
+    .stage {
+      position: relative; z-index: 1;
+      display: grid; gap: clamp(14px, 1.6vw, 22px);
+      grid-template-columns: minmax(0, 1fr);
+      max-width: 1580px; margin: 0 auto;
+      padding: clamp(16px, 2.4vw, 32px) clamp(16px, 3vw, 40px) 64px;
+    }
+    @media (min-width: 1060px) {
+      .stage { grid-template-columns: 378px minmax(0, 1fr); align-items: start; }
+      .compose { position: sticky; top: 74px; }
+    }
+    .stack { display: grid; gap: clamp(14px, 1.6vw, 22px); min-width: 0; }
+
+    .panel {
+      position: relative; min-width: 0;
+      background: linear-gradient(180deg, var(--surface-2), var(--surface));
+      border: 1px solid var(--line); border-radius: 2px;
+      box-shadow: 0 24px 46px -32px #000, inset 0 1px 0 rgba(255, 255, 255, .03);
+      animation: lift .5s cubic-bezier(.2, .7, .3, 1) both;
+    }
+    .panel::before, .panel::after {
+      content: ""; position: absolute; width: 9px; height: 9px; pointer-events: none;
+      border-color: var(--gold); opacity: .5;
+    }
+    .panel::before { left: -1px; top: -1px; border-left: 1px solid; border-top: 1px solid; }
+    .panel::after { right: -1px; bottom: -1px; border-right: 1px solid; border-bottom: 1px solid; }
+    @keyframes lift { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    .stack > .panel:nth-child(2) { animation-delay: .07s; }
+    .stack > .panel:nth-child(3) { animation-delay: .14s; }
+
+    .head {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 14px 16px 12px; border-bottom: 1px solid var(--line-soft);
+    }
+    .head h2 { margin: 0; font: 600 15px var(--display); letter-spacing: -.2px; }
+    .head .kicker {
+      display: block; margin-bottom: 3px;
+      font: 500 8.5px var(--mono); letter-spacing: 1.7px; text-transform: uppercase; color: var(--dim);
+    }
+    .body { padding: 16px; }
+    /* ---------- job list ---------- */
+    .jobs { display: grid; }
+    .job {
+      position: relative; display: grid; gap: 4px; width: 100%;
+      padding: 11px 16px; border: 0; border-top: 1px solid var(--line-soft);
+      background: none; text-align: left; cursor: pointer; transition: background .16s;
+    }
+    .job:first-child { border-top: 0; }
+    .job:hover { background: rgba(255, 255, 255, .028); }
+    .job[aria-current="true"] { background: rgba(224, 197, 138, .07); }
+    .job[aria-current="true"]::before {
+      content: ""; position: absolute; inset: 0 auto 0 0; width: 2px; background: var(--gold);
+    }
+    .job-top { display: flex; align-items: center; gap: 8px; }
+    .job-status {
+      display: inline-flex; align-items: center; gap: 5px; flex: none;
+      font: 500 8.5px var(--mono); letter-spacing: 1.2px; text-transform: uppercase; color: var(--dim);
+    }
+    .job-when { margin-left: auto; font: 400 9.5px var(--mono); color: #55635a; }
+    .job-keyword { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .job-meta { font: 400 10px var(--mono); color: #6b7a6e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .jobs-foot {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 10px 16px; border-top: 1px solid var(--line-soft);
+    }
+
+    /* ---------- leads table ---------- */
+    .toolbar {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 11px 16px; border-bottom: 1px solid var(--line-soft);
+    }
+    .search-wrap { position: relative; flex: 1 1 190px; min-width: 150px; }
+    .search-wrap svg {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      color: #6b7a6e; pointer-events: none;
+    }
+    .search-input {
+      width: 100%; height: 34px; padding: 0 10px 0 31px;
+      background: #0e1410; border: 1px solid var(--line); border-radius: 2px; font-size: 12.5px;
+    }
+    .search-input::placeholder { color: #55635a; }
+    .search-input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(224, 197, 138, .12); }
+    .mini-select {
+      height: 34px; max-width: 165px; padding: 0 26px 0 9px;
+      appearance: none; cursor: pointer; color: var(--muted); font-size: 11.5px;
+      background: #0e1410 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' fill='none' stroke='%238d9b8e' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 9px center;
+      border: 1px solid var(--line); border-radius: 2px;
+    }
+    .mini-select:focus { outline: none; border-color: var(--gold); }
+
+    .field { margin-bottom: 16px; }
+    .field > .label {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+      margin: 0 0 7px;
+      font: 500 9px var(--mono); letter-spacing: 1.5px; text-transform: uppercase; color: var(--dim);
+    }
+    .label .hint { font: 400 9.5px var(--mono); letter-spacing: 0; text-transform: none; color: #5d6b60; }
+
+    .text-input, .select-input {
+      width: 100%; height: 38px; padding: 0 11px;
+      background: #0e1410; border: 1px solid var(--line); border-radius: 2px;
+      font-size: 13.5px; transition: border-color .18s, box-shadow .18s;
+    }
+    .select-input {
+      appearance: none; cursor: pointer; padding-right: 30px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' fill='none' stroke='%238d9b8e' stroke-width='1.6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 11px center;
+    }
+    .text-input::placeholder { color: #55635a; }
+    .text-input:focus, .select-input:focus {
+      outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(224, 197, 138, .12);
+    }
+    .text-input[aria-invalid="true"] { border-color: var(--clay); }
+
+    .tag button:hover { opacity: 1; background: rgba(211, 119, 90, .22); color: var(--clay); }
+
+    .row-2 { display: grid; grid-template-columns: 1fr 104px; gap: 10px; align-items: start; }
+    .range-row { display: flex; align-items: center; gap: 10px; height: 38px; }
+    .range {
+      flex: 1; appearance: none; height: 3px; border-radius: 2px; margin: 0;
+      background: linear-gradient(90deg, var(--gold) var(--fill, 10%), var(--line) var(--fill, 10%));
+      cursor: pointer;
+    }
+    .range::-webkit-slider-thumb {
+      appearance: none; width: 13px; height: 13px; border-radius: 50%;
+      background: var(--gold); border: 2px solid var(--ink); cursor: pointer;
+    }
+    .range::-moz-range-thumb {
+      width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--ink);
+      background: var(--gold); cursor: pointer;
+    }
+    .range-value { min-width: 40px; text-align: right; font: 500 12.5px var(--mono); color: var(--gold); }
+
+    .switch-row { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 0; }
+    .switch-row input {
+      appearance: none; width: 30px; height: 17px; margin: 0; flex: none;
+      background: #0e1410; border: 1px solid var(--line); border-radius: 99px;
+      position: relative; cursor: pointer; transition: background .2s, border-color .2s;
+    }
+    .switch-row input::after {
+      content: ""; position: absolute; top: 2px; left: 2px; width: 11px; height: 11px;
+      border-radius: 50%; background: #6b7a6e; transition: transform .2s, background .2s;
+    }
+    .switch-row input:checked { background: rgba(169, 196, 172, .18); border-color: #4d6353; }
+    .switch-row input:checked::after { transform: translateX(13px); background: var(--sage); }
+    .switch-row span { font-size: 12.5px; color: var(--muted); }
+    .switch-row input:checked + span { color: var(--text); }
+
+    .primary-btn {
+      width: 100%; height: 42px; margin-top: 3px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+      background: var(--gold); border: 1px solid var(--gold); border-radius: 2px;
+      color: #20180a; font: 700 12px var(--body); letter-spacing: .5px; cursor: pointer;
+      transition: filter .18s, transform .12s;
+    }
+    .primary-btn:hover:not([disabled]) { filter: brightness(1.12); }
+    .primary-btn:active:not([disabled]) { transform: translateY(1px); }
+    .primary-btn[disabled] { opacity: .5; cursor: not-allowed; }
+    .form-note { margin: 11px 0 0; color: #5d6b60; font: 400 9.5px var(--mono); line-height: 1.65; }
+
+    .form-error {
+      display: none; margin: 0 0 14px; padding: 9px 11px;
+      background: rgba(211, 119, 90, .1); border: 1px solid rgba(211, 119, 90, .34);
+      border-left-width: 2px; border-radius: 2px; color: #edb6a4; font-size: 12px; line-height: 1.5;
+    }
+    .form-error.show { display: block; animation: lift .3s both; }
+
+    /* ---------- apify token ---------- */
+    fieldset.token-box { border: 0; margin: 0 0 16px; padding: 0; min-width: 0; }
+    .token-input {
+      height: auto; min-height: 54px; padding: 8px 10px;
+      font: 400 11px/1.6 var(--mono); resize: vertical;
+      overflow-wrap: anywhere;
+    }
+    .token-input::placeholder { font-size: 10px; }
+    .token-actions { display: flex; gap: 6px; margin-top: 7px; }
+    .token-actions .ghost-btn { height: 29px; padding: 0 10px; font-size: 10.5px; }
+
+    .tok-status {
+      display: flex; align-items: flex-start; gap: 7px; margin-top: 10px;
+      font: 500 10px var(--mono); letter-spacing: .3px; color: var(--dim); line-height: 1.55;
+    }
+    .tok-status .dot { flex: none; margin-top: 4px; }
+    .tok-meter {
+      margin-top: 11px; padding: 10px 11px; border-radius: 2px;
+      background: rgba(0, 0, 0, .26); border: 1px solid var(--line-soft);
+    }
+    .tok-meter-head {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+      font: 500 9px var(--mono); letter-spacing: 1.3px; text-transform: uppercase; color: var(--dim);
+    }
+    .tok-meter-head b {
+      font: 500 11px var(--mono); letter-spacing: 0; text-transform: none; color: var(--text);
+    }
+    .tok-bar {
+      position: relative; height: 5px; margin-top: 8px; border-radius: 3px;
+      background: var(--line); overflow: hidden;
+    }
+    .tok-bar span {
+      position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 3px;
+      background: var(--sage); transition: width .4s ease, background .3s;
+    }
+    .tok-bar span.warn { background: var(--gold); }
+    .tok-bar span.full { background: var(--clay); }
+    .tok-foot { margin: 7px 0 0; font: 400 9.5px var(--mono); color: #5d6b60; line-height: 1.6; }
+    .tok-list { display: grid; gap: 5px; margin-top: 9px; }
+    .tok-row {
+      display: flex; align-items: center; gap: 7px;
+      font: 400 10px var(--mono); color: var(--muted);
+    }
+    .tok-row em { margin-left: auto; font-style: normal; color: var(--dim); }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    .table-scroll { overflow-x: auto; }
+    thead th {
+      padding: 9px 14px; background: #0f1511; border-bottom: 1px solid var(--line);
+      font: 500 8.5px var(--mono); letter-spacing: 1.4px; text-transform: uppercase;
+      color: #6b7a6e; white-space: nowrap;
+    }
+    tbody td { padding: 12px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+    tbody tr { animation: lift .32s both; transition: background .15s; }
+    tbody tr:hover { background: rgba(255, 255, 255, .028); }
+    tbody tr:last-child td { border-bottom: 0; }
+
+    .co-name { display: flex; align-items: flex-start; gap: 8px; min-width: 195px; max-width: 285px; }
+    .co-initial {
+      flex: none; width: 24px; height: 24px; margin-top: 1px; display: grid; place-items: center;
+      border: 1px solid rgba(169, 196, 172, .3); border-radius: 50% 50% 50% 3px;
+      background: rgba(169, 196, 172, .09); color: var(--sage); font: 600 10px var(--mono);
+    }
+    .co-title { font-weight: 600; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+    .co-id { margin-top: 3px; font: 400 9px var(--mono); color: #4f5d53; overflow-wrap: anywhere; }
+    .cat {
+      display: inline-block; max-width: 170px; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; padding: 3px 7px; border-radius: 2px;
+      background: rgba(224, 197, 138, .08); border: 1px solid rgba(224, 197, 138, .2);
+      color: #d8c39a; font-size: 10.5px;
+    }
+    .loc { min-width: 155px; max-width: 225px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .loc small { display: block; margin-top: 2px; color: #56635a; font: 400 9.5px var(--mono); }
+    .rating { white-space: nowrap; font: 500 12px var(--mono); }
+    .rating span { color: var(--gold); margin-right: 4px; }
+    .rating small { display: block; margin-top: 2px; color: #56635a; font: 400 9.5px var(--mono); }
+    .contacts { display: grid; gap: 4px; min-width: 165px; }
+    .contacts a {
+      font-size: 11.5px; text-decoration: none; color: var(--sage);
+      max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .contacts a:hover { text-decoration: underline; }
+    .contacts .none { color: #4f5d53; font-size: 11px; font-style: italic; }
+    .row-btn {
+      width: 26px; height: 26px; display: grid; place-items: center;
+      background: transparent; border: 1px solid var(--line); border-radius: 2px;
+      color: var(--muted); cursor: pointer; transition: color .16s, border-color .16s;
+    }
+    .row-btn:hover { color: var(--gold); border-color: #4a4433; }
+
+    /* ---------- states ---------- */
+    .state { padding: 56px 22px; text-align: center; }
+    .state .mark {
+      width: 38px; height: 38px; margin: 0 auto 13px; display: grid; place-items: center;
+      border: 1px solid var(--line); border-radius: 50% 50% 50% 4px; color: var(--dim);
+    }
+    .state b { display: block; margin-bottom: 5px; font: 600 15px var(--display); color: var(--text); }
+    .state p { margin: 0 auto; max-width: 340px; color: var(--dim); font-size: 12.5px; line-height: 1.6; }
+    .state.bad .mark { border-color: rgba(211, 119, 90, .4); color: var(--clay); }
+    .state.bad b { color: #edb6a4; }
+    .skeleton { display: grid; gap: 9px; padding: 18px 16px; }
+    .skeleton i {
+      display: block; height: 11px; border-radius: 2px;
+      background: linear-gradient(90deg, #1b241d 25%, #222d25 50%, #1b241d 75%);
+      background-size: 300% 100%; animation: shimmer 1.3s linear infinite;
+    }
+    @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+    /* ---------- toast ---------- */
+    .toast {
+      position: fixed; left: 50%; bottom: 22px; z-index: 60;
+      transform: translate(-50%, 10px);
+      max-width: min(420px, calc(100vw - 32px));
+      padding: 10px 16px; border-radius: 2px;
+      background: var(--surface-2); border: 1px solid var(--line); border-left: 2px solid var(--gold);
+      box-shadow: 0 18px 40px -18px #000;
+      color: var(--text); font-size: 12.5px; line-height: 1.45;
+      opacity: 0; pointer-events: none; transition: opacity .22s, transform .22s;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast.bad { border-left-color: var(--clay); }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+    }
+
+    @media (max-width: 780px) {
+      .bar { gap: 10px; }
+      .brand { flex: 1 1 100%; }
+      .key-field { flex: 1 1 170px; }
+      .key-input { width: 100%; }
+      .head { align-items: flex-start; flex-direction: column; gap: 8px; }
+      .jobs-foot { flex-wrap: wrap; }
+    }
+    @media (max-width: 560px) {
+      .stage { padding-left: 12px; padding-right: 12px; }
+      .body { padding: 14px; }
+      .row-2 { grid-template-columns: 1fr 88px; }
+      thead th, tbody td { padding-left: 11px; padding-right: 11px; }
+      .toolbar { padding: 10px 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="bar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M19.5 4.5C11.3 4.7 5.2 7.6 5.2 14c0 3.2 2.2 5.2 5.2 5.2 6.4 0 9.2-6.2 9.1-14.7Z" stroke="currentColor" stroke-width="1.7"/><path d="M4 20c2.8-4.8 6.3-7.9 11.6-10.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      </div>
+      <div class="brand-text">
+        <b>Prospek</b>
+        <span>Natural Decor</span>
+      </div>
+    </div>
+
+    <div class="key-field">
+      <label for="api-key">API key</label>
+      <input id="api-key" class="key-input" type="password" placeholder="X-API-Key" autocomplete="off" spellcheck="false">
+      <button id="key-save" class="ghost-btn" type="button">Simpan</button>
+    </div>
+    <div class="status-chip" id="conn-status" role="status" aria-live="polite">
+      <span class="dot" id="conn-dot"></span><span id="conn-text">Belum tersambung</span>
+    </div>
+  </header>
+
+  <main class="stage">
+    <!-- ============ composer ============ -->
+    <section class="panel compose" aria-labelledby="compose-title">
+      <div class="head">
+        <h2 id="compose-title"><span class="kicker">Langkah 01</span>Pencarian baru</h2>
+      </div>
+      <div class="body">
+        <p class="form-error" id="form-error" role="alert"></p>
+
+        <div class="field">
+          <div class="label"><label for="keyword">Keyword pencarian</label></div>
+          <input id="keyword" class="text-input" type="text" placeholder="Contoh: coffee shop" autocomplete="off" maxlength="200">
+        </div>
+
+        <div class="field">
+          <div class="label"><label for="location">Lokasi</label></div>
+          <input id="location" class="text-input" type="text" placeholder="Ubud, Bali, Indonesia" autocomplete="off" maxlength="200">
+        </div>
+
+        <div class="field">
+          <div class="label">
+            <label for="max-results">Batas hasil</label>
+            <span class="hint" id="results-hint">maksimal 50 hasil</span>
+          </div>
+          <div class="range-row">
+            <input id="max-results" class="range" type="range" min="1" max="500" step="1" value="50">
+            <output class="range-value" id="max-results-value" for="max-results">50</output>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="row-2">
+            <div>
+              <div class="label"><label for="language">Bahasa</label></div>
+              <select id="language" class="select-input">
+                <option value="id">Indonesia</option>
+                <option value="en">Inggris</option>
+              </select>
+            </div>
+            <div>
+              <div class="label"><span>Kontak</span></div>
+              <label class="switch-row" for="scrape-contacts" style="height:38px">
+                <input id="scrape-contacts" type="checkbox" checked>
+                <span>Ambil</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="switch-row" for="scrape-social">
+            <input id="scrape-social" type="checkbox">
+            <span>Sertakan Facebook &amp; Instagram</span>
+          </label>
+        </div>
+
+        <fieldset class="field token-box" id="token-box">
+          <div class="label">
+            <label for="apify-token">Token Apify</label>
+            <span class="hint" id="token-hint">opsional</span>
+          </div>
+          <textarea id="apify-token" class="text-input token-input" rows="2" spellcheck="false"
+            autocomplete="off" placeholder="apify_api_…  (boleh beberapa, pisahkan dengan koma)"></textarea>
+          <div class="token-actions">
+            <button id="token-check" class="ghost-btn" type="button">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 13 4.5 4.5L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Periksa
+            </button>
+            <button id="token-clear" class="ghost-btn" type="button">Hapus</button>
+          </div>
+          <div class="tok-status" id="token-status">
+            <span class="dot" id="token-dot"></span>
+            <span id="token-status-text">Memakai token dari server (.env) bila ada.</span>
+          </div>
+          <div class="tok-meter" id="token-meter" hidden>
+            <div class="tok-meter-head">
+              <span>Pemakaian bulan ini</span>
+              <b id="token-usage">—</b>
+            </div>
+            <div class="tok-bar"><span id="token-bar"></span></div>
+            <p class="tok-foot" id="token-foot"></p>
+          </div>
+          <div class="tok-list" id="token-list"></div>
+        </fieldset>
+
+        <button id="submit-btn" class="primary-btn" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m21 3-8.4 18-2.2-7.4L3 11.4 21 3Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>
+          <span id="submit-label">Jalankan pencarian</span>
+        </button>
+        <p class="form-note" id="form-note">Job berjalan di latar belakang. Biaya Apify mengikuti pemakaian akun.</p>
+      </div>
+    </section>
+
+    <div class="stack">
+      <!-- ============ jobs ============ -->
+      <section class="panel" aria-labelledby="jobs-title">
+        <div class="head">
+          <h2 id="jobs-title"><span class="kicker">Riwayat</span>Job pencarian</h2>
+          <button id="refresh-jobs" class="ghost-btn" type="button">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Muat ulang
+          </button>
+        </div>
+        <div class="jobs" id="jobs-list" aria-live="polite"></div>
+        <div class="jobs-foot">
+          <span class="job-meta" id="jobs-summary">—</span>
+          <a id="csv-link" class="ghost-btn" href="#" download hidden>Unduh CSV</a>
+        </div>
+      </section>
+
+      <!-- ============ leads ============ -->
+      <section class="panel" aria-labelledby="leads-title">
+        <div class="head">
+          <h2 id="leads-title"><span class="kicker">Hasil</span><span id="leads-name">Prospek</span></h2>
+          <span class="job-meta" id="leads-count">—</span>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <input id="lead-search" class="search-input" type="search" placeholder="Cari nama, alamat, kontak…" autocomplete="off" aria-label="Cari prospek">
+          </div>
+          <select id="lead-filter" class="mini-select" aria-label="Filter kontak">
+            <option value="all">Semua kontak</option>
+            <option value="phone">Punya telepon</option>
+            <option value="email">Punya email</option>
+            <option value="website">Punya website</option>
+            <option value="none">Tanpa kontak</option>
+          </select>
+          <select id="lead-sort" class="mini-select" aria-label="Urutkan">
+            <option value="default">Urutan asli</option>
+            <option value="rating">Rating tertinggi</option>
+            <option value="reviews">Ulasan terbanyak</option>
+            <option value="name">Nama A–Z</option>
+          </select>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Bisnis</th><th>Kategori</th><th>Lokasi</th><th>Rating</th><th>Kontak</th><th><span class="sr-only">Sumber</span></th></tr>
+            </thead>
+            <tbody id="leads-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    "use strict";
+
+    const API = "/api/v1";
+    const KEY_STORAGE = "prospek.apiKey";
+    const TOKEN_STORAGE = "prospek.apifyToken";
+    const ACTIVE = new Set(["queued", "running"]);
+
+    const $ = (id) => document.getElementById(id);
+
+    const el = {
+      keyInput: $("api-key"),
+      keySave: $("key-save"),
+      connDot: $("conn-dot"),
+      connText: $("conn-text"),
+      keyword: $("keyword"),
+      location: $("location"),
+      maxResults: $("max-results"),
+      maxResultsValue: $("max-results-value"),
+      resultsHint: $("results-hint"),
+      language: $("language"),
+      scrapeContacts: $("scrape-contacts"),
+      scrapeSocial: $("scrape-social"),
+      submit: $("submit-btn"),
+      formError: $("form-error"),
+      formNote: $("form-note"),
+      jobsList: $("jobs-list"),
+      jobsSummary: $("jobs-summary"),
+      refreshJobs: $("refresh-jobs"),
+      csvLink: $("csv-link"),
+      leadsName: $("leads-name"),
+      leadsCount: $("leads-count"),
+      leadsBody: $("leads-body"),
+      leadSearch: $("lead-search"),
+      leadFilter: $("lead-filter"),
+      leadSort: $("lead-sort"),
+      toast: $("toast"),
+      apifyToken: $("apify-token"),
+      tokenCheck: $("token-check"),
+      tokenClear: $("token-clear"),
+      tokenHint: $("token-hint"),
+      tokenDot: $("token-dot"),
+      tokenStatusText: $("token-status-text"),
+      tokenMeter: $("token-meter"),
+      tokenUsage: $("token-usage"),
+      tokenBar: $("token-bar"),
+      tokenFoot: $("token-foot"),
+      tokenList: $("token-list"),
+    };
+
+    const state = {
+      apiKey: sessionStorage.getItem(KEY_STORAGE) || "",
+      apifyToken: sessionStorage.getItem(TOKEN_STORAGE) || "",
+      tokenInfo: null,
+      jobs: [],
+      selectedId: null,
+      leads: [],
+      loadingLeads: false,
+      pollTimer: null,
+      toastTimer: null,
+    };
+
+    /* ---------------- helpers ---------------- */
+
+    function failure(message, init) {
+      const error = new Error(message);
+      error.status = init && init.status;
+      error.payload = init && init.payload;
+      return error;
+    }
+
+    async function api(path, options) {
+      const opts = Object.assign({ method: "GET" }, options);
+      opts.headers = Object.assign(
+        { "X-API-Key": state.apiKey },
+        opts.body ? { "Content-Type": "application/json" } : {},
+        opts.headers || {}
+      );
+      let response;
+      try {
+        response = await fetch(API + path, opts);
+      } catch (cause) {
+        throw failure("Tidak dapat menghubungi server. Pastikan API berjalan.", { status: 0 });
+      }
+      if (response.status === 204) return null;
+      const raw = await response.text();
+      let payload = null;
+      if (raw) {
+        try { payload = JSON.parse(raw); } catch (cause) { payload = null; }
+      }
+      if (!response.ok) {
+        throw failure(describeError(response.status, payload), {
+          status: response.status,
+          payload,
+        });
+      }
+      return payload;
+    }
+
+    function describeError(status, payload) {
+      const detail = payload && payload.detail;
+      if (status === 401) return "API key tidak valid. Periksa nilai di bilah atas.";
+      if (status === 404) return "Data tidak ditemukan.";
+      if (status === 409) return "Hasil job belum siap.";
+      if (status === 422) {
+        if (Array.isArray(detail) && detail.length) {
+          const first = detail[0];
+          const field = Array.isArray(first.loc) ? first.loc[first.loc.length - 1] : "";
+          return `${field ? field + ": " : ""}${first.msg || "Data tidak valid."}`;
+        }
+        return "Data yang dikirim tidak valid.";
+      }
+      if (status === 429) return "Batas job aktif tercapai. Tunggu job lain selesai.";
+      if (status === 503) {
+        return typeof detail === "string" ? detail : "Layanan belum dikonfigurasi di server.";
+      }
+      if (typeof detail === "string") return detail;
+      return `Permintaan gagal (HTTP ${status}).`;
+    }
+
+    function setConn(kind, label) {
+      el.connDot.className = "dot" + (kind ? " " + kind : "");
+      el.connText.textContent = label;
+    }
+
+    function toast(message, bad) {
+      el.toast.textContent = message;
+      el.toast.className = "toast show" + (bad ? " bad" : "");
+      window.clearTimeout(state.toastTimer);
+      state.toastTimer = window.setTimeout(() => {
+        el.toast.className = "toast" + (bad ? " bad" : "");
+      }, 3200);
+    }
+
+    function text(value) {
+      return value === null || value === undefined ? "" : String(value);
+    }
+
+    function asNumber(value) {
+      const parsed = typeof value === "number" ? value : parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function httpUrl(raw) {
+      const candidate = text(raw).trim();
+      if (!candidate) return "";
+      try {
+        const url = new URL(/^https?:\/\//i.test(candidate) ? candidate : "https://" + candidate);
+        return url.protocol === "http:" || url.protocol === "https:" ? url.href : "";
+      } catch (cause) {
+        return "";
+      }
+    }
+
+    function firstEmail(lead) {
+      const raw = lead.email;
+      if (Array.isArray(raw)) return text(raw[0]).trim();
+      const single = text(raw).trim();
+      if (!single) return "";
+      if (single.startsWith("[")) {
+        // Actor kadang mengirim email sebagai string JSON, mis. "[]" atau '["a@b.c"]'.
+        try {
+          const parsed = JSON.parse(single);
+          if (Array.isArray(parsed)) return parsed.length ? text(parsed[0]).trim() : "";
+        } catch (cause) { /* bukan JSON; perlakukan sebagai teks biasa */ }
+      }
+      return single.split(/[;,\s]+/).filter(Boolean)[0] || "";
+    }
+
+    function relativeTime(iso) {
+      if (!iso) return "";
+      const then = new Date(iso);
+      if (Number.isNaN(then.getTime())) return "";
+      const seconds = Math.round((Date.now() - then.getTime()) / 1000);
+      if (seconds < 60) return "baru saja";
+      const minutes = Math.round(seconds / 60);
+      if (minutes < 60) return `${minutes} mnt lalu`;
+      const hours = Math.round(minutes / 60);
+      if (hours < 24) return `${hours} jam lalu`;
+      const days = Math.round(hours / 24);
+      if (days < 30) return `${days} hari lalu`;
+      return then.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+    }
+
+    function statusMeta(status) {
+      switch (status) {
+        case "succeeded": return { dot: "ok", label: "selesai" };
+        case "failed": return { dot: "bad", label: "gagal" };
+        case "running": return { dot: "wait", label: "berjalan" };
+        default: return { dot: "wait", label: "menunggu" };
+      }
+    }
+
+    function node(tag, className, content) {
+      const element = document.createElement(tag);
+      if (className) element.className = className;
+      if (content !== undefined && content !== null) {
+        if (content instanceof Node) element.append(content);
+        else element.textContent = text(content);
+      }
+      return element;
+    }
+
+    function icon(path, size) {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("width", size || 14);
+      svg.setAttribute("height", size || 14);
+      svg.setAttribute("viewBox", "0 0 24 24");
+      svg.setAttribute("fill", "none");
+      svg.setAttribute("aria-hidden", "true");
+      const shape = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      shape.setAttribute("d", path);
+      shape.setAttribute("stroke", "currentColor");
+      shape.setAttribute("stroke-width", "1.8");
+      shape.setAttribute("stroke-linecap", "round");
+      shape.setAttribute("stroke-linejoin", "round");
+      svg.append(shape);
+      return svg;
+    }
+
+    function emptyState(target, title, message, bad) {
+      const wrapper = node("div", "state" + (bad ? " bad" : ""));
+      const mark = node("div", "mark");
+      mark.append(icon(bad ? "M12 8v4m0 4h.01M12 3 2.6 20h18.8L12 3Z" : "M4 20V6a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z", 16));
+      wrapper.append(mark, node("b", null, title), node("p", null, message));
+
+      // <tbody> tidak boleh berisi <div>; bungkus dalam baris tabel agar tetap dirender.
+      if (target.tagName === "TBODY") {
+        const cell = node("td");
+        cell.colSpan = 6;
+        cell.style.padding = "0";
+        cell.style.border = "0";
+        cell.append(wrapper);
+        const row = node("tr");
+        row.append(cell);
+        target.replaceChildren(row);
+        return;
+      }
+      target.replaceChildren(wrapper);
+    }
+
+    function formError(message) {
+      el.formError.textContent = message || "";
+      el.formError.classList.toggle("show", Boolean(message));
+    }
+
+    function updateResultsHint() {
+      const total = Number(el.maxResults.value) || 1;
+      el.maxResultsValue.textContent = String(total);
+      el.maxResults.style.setProperty("--fill", `${(total / 500) * 100}%`);
+      el.resultsHint.textContent = `maksimal ${total} hasil`;
+    }
+
+    /* ---------------- apify token ---------------- */
+
+    function tokenCount(raw) {
+      return text(raw).split(/[,;\s]+/).filter(Boolean).length;
+    }
+
+    function setTokenStatus(kind, message) {
+      el.tokenDot.className = "dot" + (kind ? " " + kind : "");
+      el.tokenStatusText.textContent = message;
+    }
+
+    function money(value) {
+      if (value === null || value === undefined) return "—";
+      return "$" + Number(value).toFixed(2);
+    }
+
+    function resetTokenMeter() {
+      el.tokenMeter.hidden = true;
+      el.tokenUsage.textContent = "—";
+      el.tokenBar.style.width = "0%";
+      el.tokenBar.className = "";
+      el.tokenFoot.textContent = "";
+      el.tokenList.replaceChildren();
+    }
+
+    function renderTokenInfo(data) {
+      const items = Array.isArray(data.tokens) ? data.tokens : [];
+      state.tokenInfo = data;
+
+      el.tokenList.replaceChildren();
+      if (items.length > 1) {
+        items.forEach((item, index) => {
+          const row = node("div", "tok-row");
+          row.append(
+            node("span", "dot " + (item.valid && !item.exhausted ? "ok" : "bad")),
+            node("span", null, `token ${index + 1} ${item.token}`),
+            node("em", null, item.valid && !item.exhausted ? "siap" : (item.exhausted ? "habis" : "ditolak"))
+          );
+          el.tokenList.append(row);
+        });
+      }
+
+      const usable = items.find((item) => item.valid && !item.exhausted);
+      if (!usable) {
+        const broken = items[0];
+        resetTokenMeter();
+        setTokenStatus("bad", (broken && broken.error) || "Token Apify tidak dapat dipakai.");
+        return;
+      }
+
+      const who = [usable.username, usable.plan].filter(Boolean).join(" · ");
+      setTokenStatus("ok", who || "Token Apify valid.");
+
+      if (usable.limit_usd && usable.usage_usd !== null) {
+        const ratio = Math.min(1, Math.max(0, usable.usage_usd / usable.limit_usd));
+        el.tokenMeter.hidden = false;
+        el.tokenUsage.textContent = `${money(usable.usage_usd)} / ${money(usable.limit_usd)}`;
+        el.tokenBar.style.width = `${(ratio * 100).toFixed(1)}%`;
+        el.tokenBar.className = ratio >= 1 ? "full" : ratio >= 0.8 ? "warn" : "";
+        const pct = Math.round(ratio * 100);
+        let foot = `Terpakai ${pct}% dari batas bulanan.`;
+        if (usable.cycle_end_at) {
+          const end = new Date(usable.cycle_end_at);
+          if (!Number.isNaN(end.getTime())) {
+            foot += ` Siklus berakhir ${end.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}.`;
+          }
+        }
+        el.tokenFoot.textContent = foot;
+      } else {
+        resetTokenMeter();
+      }
+    }
+
+    async function checkToken(force) {
+      const raw = el.apifyToken.value.trim();
+      if (!raw) {
+        setTokenStatus("", "Memakai token dari server (.env) bila ada.");
+        resetTokenMeter();
+        return;
+      }
+      if (!state.apiKey) {
+        setTokenStatus("bad", "Isi API key dashboard dulu untuk memeriksa token.");
+        return;
+      }
+
+      setBusy(el.tokenCheck, true, "Memeriksa…");
+      setTokenStatus("wait", "Menghubungi Apify…");
+      saveToken(raw);
+      try {
+        const data = await api("/apify-tokens/check", {
+          method: "POST",
+          body: JSON.stringify({ token: raw }),
+        });
+        renderTokenInfo(data);
+      } catch (error) {
+        resetTokenMeter();
+        setTokenStatus("bad", error.message);
+      } finally {
+        setBusy(el.tokenCheck, false, "Periksa");
+      }
+    }
+
+    function saveToken(raw) {
+      state.apifyToken = text(raw).trim();
+      state.tokenInfo = null;
+      if (state.apifyToken) sessionStorage.setItem(TOKEN_STORAGE, state.apifyToken);
+      else sessionStorage.removeItem(TOKEN_STORAGE);
+      updateTokenHint();
+    }
+
+    function updateTokenHint() {
+      const count = tokenCount(el.apifyToken.value);
+      el.tokenHint.textContent = count > 1 ? `${count} token` : "opsional";
+    }
+
+    function clearToken() {
+      el.apifyToken.value = "";
+      saveToken("");
+      resetTokenMeter();
+      setTokenStatus("", "Memakai token dari server (.env) bila ada.");
+    }
+
+    /* ---------------- create job ---------------- */
+
+    async function submitJob() {
+      if (!state.apiKey) {
+        formError("Isi API key dulu di bilah atas, lalu tekan Simpan.");
+        el.keyInput.focus();
+        return;
+      }
+      const keyword = el.keyword.value.trim();
+      if (!keyword) {
+        formError("Masukkan keyword pencarian.");
+        el.keyword.setAttribute("aria-invalid", "true");
+        el.keyword.focus();
+        return;
+      }
+      if (keyword.length > 200) {
+        formError("Keyword maksimal 200 karakter.");
+        el.keyword.setAttribute("aria-invalid", "true");
+        el.keyword.focus();
+        return;
+      }
+      el.keyword.removeAttribute("aria-invalid");
+      const location = el.location.value.trim();
+      if (location.length < 2) {
+        formError("Lokasi minimal 2 karakter.");
+        el.location.setAttribute("aria-invalid", "true");
+        el.location.focus();
+        return;
+      }
+      el.location.removeAttribute("aria-invalid");
+      formError("");
+
+      const rawToken = el.apifyToken.value.trim();
+      saveToken(rawToken);
+
+      const payload = {
+        keyword,
+        location,
+        max_results: Number(el.maxResults.value),
+        language: el.language.value,
+        scrape_contacts: el.scrapeContacts.checked,
+        scrape_social_media: el.scrapeSocial.checked,
+      };
+      const headers = state.apifyToken ? { "X-Apify-Token": state.apifyToken } : {};
+
+      setBusy(el.submit, true, "Menjalankan…");
+      try {
+        const job = await api("/jobs", {
+          method: "POST",
+          body: JSON.stringify(payload),
+          headers,
+        });
+        const source = job.token_source === "dashboard" ? "token dari dashboard" : "token server";
+        toast(`Job dibuat (${source}). Hasil muncul otomatis saat selesai.`);
+        state.selectedId = job.job_id;
+        await loadJobs();
+        el.keyword.value = "";
+        el.location.value = "";
+      } catch (error) {
+        formError(error.message);
+      } finally {
+        setBusy(el.submit, false, "Jalankan pencarian");
+      }
+    }
+
+    function setBusy(button, busy, label) {
+      button.disabled = busy;
+      const labelNode = button.querySelector("#submit-label") || button;
+      if (labelNode !== button) labelNode.textContent = label;
+      else button.textContent = label;
+    }
+
+    /* ---------------- jobs ---------------- */
+
+    async function loadJobs() {
+      if (!state.apiKey) {
+        emptyState(el.jobsList, "API key dibutuhkan", "Masukkan X-API-Key lalu tekan Simpan untuk memuat riwayat job.");
+        return;
+      }
+      try {
+        const data = await api("/jobs?limit=50");
+        state.jobs = Array.isArray(data.items) ? data.items : [];
+        setConn("ok", "Tersambung");
+        renderJobs();
+        // Tanpa pilihan aktif, tampilkan hasil job terbaru yang sudah selesai.
+        if (!state.selectedId && state.jobs.length) {
+          const prefer = state.jobs.find((job) => job.status === "succeeded") || state.jobs[0];
+          await selectJob(prefer.job_id);
+        }
+      } catch (error) {
+        state.jobs = [];
+        setConn("bad", error.status === 401 ? "Key ditolak" : "Terputus");
+        emptyState(el.jobsList, "Gagal memuat job", error.message, true);
+        el.jobsSummary.textContent = "—";
+      }
+    }
+
+    function renderJobs() {
+      el.jobsList.replaceChildren();
+      if (!state.jobs.length) {
+        emptyState(
+          el.jobsList,
+          "Belum ada job",
+          "Jalankan pencarian pertama; riwayatnya akan muncul di sini."
+        );
+        el.jobsSummary.textContent = "0 job";
+        el.csvLink.hidden = true;
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      state.jobs.forEach((job) => {
+        const meta = statusMeta(job.status);
+        const request = job.request || {};
+        const keyword = request.keyword || (Array.isArray(request.niches) ? request.niches.join(" · ") : "");
+
+        const item = node("button", "job");
+        item.type = "button";
+        item.setAttribute("aria-current", String(job.job_id === state.selectedId));
+
+        const top = node("div", "job-top");
+        const status = node("span", "job-status");
+        status.append(node("span", "dot " + meta.dot), node("span", null, meta.label));
+        top.append(status, node("span", "job-when", relativeTime(job.created_at)));
+
+        const title = node("div", "job-keyword", keyword || "Tanpa keyword");
+        title.title = keyword;
+
+        const bits = [text(request.location) || "lokasi tidak diketahui"];
+        if (job.status === "succeeded") bits.push(`${job.result_count || 0} prospek`);
+        if (job.status === "failed") bits.push("lihat detail");
+        const line = node("div", "job-meta", bits.join(" — "));
+
+        item.append(top, title, line);
+        item.addEventListener("click", () => selectJob(job.job_id));
+        fragment.append(item);
+      });
+      el.jobsList.append(fragment);
+
+      const active = state.jobs.filter((job) => ACTIVE.has(job.status)).length;
+      el.jobsSummary.textContent = `${state.jobs.length} job${active ? ` · ${active} berjalan` : ""}`;
+      el.csvLink.hidden = !state.selectedId;
+      scheduleJobPolling();
+    }
+
+    function scheduleJobPolling() {
+      window.clearTimeout(state.pollTimer);
+      if (!state.jobs.some((job) => ACTIVE.has(job.status))) return;
+      state.pollTimer = window.setTimeout(async () => {
+        await loadJobs();
+        if (state.selectedId) await loadLeads(state.selectedId, true);
+      }, 4000);
+    }
+
+    /* ---------------- leads ---------------- */
+
+    async function selectJob(jobId) {
+      state.selectedId = jobId;
+      el.csvLink.hidden = false;
+      el.csvLink.href = `${API}/jobs/${encodeURIComponent(jobId)}/leads.csv`;
+      renderJobs();
+      await loadLeads(jobId, false);
+    }
+
+    async function loadLeads(jobId, quiet) {
+      const job = state.jobs.find((item) => item.job_id === jobId);
+      const request = (job && job.request) || {};
+      const keyword = request.keyword || (Array.isArray(request.niches) ? request.niches.join(" · ") : "");
+      el.leadsName.textContent = keyword || "Prospek";
+
+      if (job && ACTIVE.has(job.status)) {
+        state.leads = [];
+        el.leadsCount.textContent = "menunggu";
+        emptyState(
+          el.leadsBody,
+          "Pencarian sedang berjalan",
+          "Hasil muncul otomatis setelah job selesai. Halaman ini memeriksa ulang setiap 4 detik.",
+          false
+        );
+        return;
+      }
+      if (job && job.status === "failed") {
+        state.leads = [];
+        el.leadsCount.textContent = "gagal";
+        emptyState(el.leadsBody, "Job gagal", text(job.error) || "Tidak ada pesan kesalahan dari server.", true);
+        return;
+      }
+
+      if (!quiet) {
+        el.leadsCount.textContent = "memuat…";
+        const skeleton = node("div", "skeleton");
+        skeleton.append(node("i"), node("i"), node("i"), node("i"), node("i"));
+        const cell = node("td");
+        cell.colSpan = 6;
+        cell.style.padding = "0";
+        cell.style.border = "0";
+        cell.append(skeleton);
+        const row = node("tr");
+        row.append(cell);
+        el.leadsBody.replaceChildren(row);
+      }
+
+      state.loadingLeads = true;
+      try {
+        const data = await api(`/jobs/${encodeURIComponent(jobId)}/leads?limit=500`);
+        state.leads = Array.isArray(data.items) ? data.items : [];
+        el.leadsCount.textContent = `${data.total ?? state.leads.length} prospek`;
+        renderLeads();
+      } catch (error) {
+        state.leads = [];
+        if (error.status === 409) {
+          el.leadsCount.textContent = "belum siap";
+          emptyState(el.leadsBody, "Hasil belum siap", "Job masih diproses. Coba lagi beberapa saat.", false);
+        } else {
+          el.leadsCount.textContent = "gagal";
+          emptyState(el.leadsBody, "Gagal memuat prospek", error.message, true);
+        }
+      } finally {
+        state.loadingLeads = false;
+      }
+    }
+
+    function filteredLeads() {
+      const query = el.leadSearch.value.trim().toLowerCase();
+      const filter = el.leadFilter.value;
+      const rows = state.leads.filter((lead) => {
+        if (query) {
+          const haystack = [
+            lead.company_name, lead.category, lead.address, lead.city,
+            lead.region, lead.country, lead.phone, firstEmail(lead), lead.website,
+          ].map(text).join(" ").toLowerCase();
+          if (!haystack.includes(query)) return false;
+        }
+        const hasPhone = Boolean(text(lead.phone).trim());
+        const hasEmail = Boolean(firstEmail(lead));
+        const hasSite = Boolean(httpUrl(lead.website));
+        if (filter === "phone" && !hasPhone) return false;
+        if (filter === "email" && !hasEmail) return false;
+        if (filter === "website" && !hasSite) return false;
+        if (filter === "none" && (hasPhone || hasEmail || hasSite)) return false;
+        return true;
+      });
+
+      const sort = el.leadSort.value;
+      if (sort === "rating") {
+        rows.sort((a, b) => (asNumber(b.rating) ?? -1) - (asNumber(a.rating) ?? -1));
+      } else if (sort === "reviews") {
+        rows.sort((a, b) => (asNumber(b.reviews_count) ?? -1) - (asNumber(a.reviews_count) ?? -1));
+      } else if (sort === "name") {
+        rows.sort((a, b) => text(a.company_name).localeCompare(text(b.company_name), "id"));
+      }
+      return rows;
+    }
+
+    function renderLeads() {
+      const rows = filteredLeads();
+      if (!state.leads.length) {
+        emptyState(el.leadsBody, "Job ini belum punya prospek", "Coba jalankan ulang dengan keyword atau lokasi yang lebih luas.", false);
+        return;
+      }
+      if (!rows.length) {
+        emptyState(el.leadsBody, "Tidak ada hasil cocok", "Ubah kata kunci atau filter kontak.", false);
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      rows.forEach((lead, index) => {
+        const row = node("tr");
+        row.style.animationDelay = `${Math.min(index, 14) * 16}ms`;
+
+        /* business */
+        const name = text(lead.company_name).trim();
+        const initial = (name || "?").trim().charAt(0).toUpperCase();
+        const coBlock = node("div", "co-name");
+        const coText = node("div");
+        const title = node("div", "co-title", name || "Nama tidak tersedia");
+        title.title = name;
+        coText.append(title);
+        const placeId = text(lead.place_id).trim();
+        if (placeId) coText.append(node("div", "co-id", placeId));
+        coBlock.append(node("div", "co-initial", initial), coText);
+
+        /* category */
+        const category = text(lead.category).trim();
+        const categoryCell = node("td");
+        if (category) {
+          const tag = node("span", "cat", category);
+          tag.title = category;
+          categoryCell.append(tag);
+        } else {
+          categoryCell.append(node("span", "co-id", "—"));
+        }
+
+        /* location */
+        const address = text(lead.address).trim();
+        const area = [lead.city, lead.region, lead.country].map(text).filter(Boolean).join(", ");
+        const locCell = node("td");
+        const locBlock = node("div", "loc");
+        locBlock.append(text(address || area || "Lokasi tidak tersedia"));
+        if (address && area && !address.includes(area.split(",")[0].trim())) {
+          locBlock.append(node("small", null, area));
+        } else if (text(lead.postal_code).trim()) {
+          locBlock.append(node("small", null, text(lead.postal_code).trim()));
+        }
+        locCell.append(locBlock);
+
+        /* rating */
+        const rating = asNumber(lead.rating);
+        const reviews = asNumber(lead.reviews_count);
+        const ratingCell = node("td");
+        const ratingBlock = node("div", "rating");
+        if (rating !== null) {
+          ratingBlock.append(node("span", null, "★"), node("span", null, rating.toFixed(1)));
+        } else {
+          ratingBlock.append(node("span", null, "—"));
+        }
+        if (reviews !== null) {
+          ratingBlock.append(node("small", null, `${Math.round(reviews)} ulasan`));
+        }
+        ratingCell.append(ratingBlock);
+
+        /* contacts */
+        const contacts = node("div", "contacts");
+        const phone = text(lead.phone).trim();
+        if (phone) {
+          const link = node("a", null, phone);
+          link.href = "tel:" + phone.replace(/[^\d+]/g, "");
+          contacts.append(link);
+        }
+        const email = firstEmail(lead);
+        if (email) {
+          const link = node("a", null, email);
+          link.href = "mailto:" + email;
+          link.title = email;
+          contacts.append(link);
+        }
+        const site = httpUrl(lead.website);
+        if (site) {
+          const link = node("a", null, new URL(site).hostname.replace(/^www\./, ""));
+          link.href = site;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.title = site;
+          contacts.append(link);
+        }
+        if (!contacts.childElementCount) contacts.append(node("span", "none", "Belum ada kontak"));
+        const contactCell = node("td");
+        contactCell.append(contacts);
+
+        /* source */
+        const source = httpUrl(lead.source_url);
+        const sourceCell = node("td");
+        if (source) {
+          const link = node("a", "row-btn");
+          link.href = source;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.title = "Buka di Google Maps";
+          link.setAttribute("aria-label", `Buka ${name || "bisnis"} di Google Maps`);
+          link.append(icon("M7 17 17 7M9 7h8v8", 13));
+          sourceCell.append(link);
+        } else {
+          sourceCell.append(node("span", "none", "—"));
+        }
+
+        row.append(
+          node("td", null, coBlock),
+          categoryCell,
+          locCell,
+          ratingCell,
+          contactCell,
+          sourceCell
+        );
+        fragment.append(row);
+      });
+      el.leadsBody.replaceChildren(fragment);
+    }
+
+    /* ---------------- wiring ---------------- */
+
+    function saveKey() {
+      state.apiKey = el.keyInput.value.trim();
+      if (state.apiKey) sessionStorage.setItem(KEY_STORAGE, state.apiKey);
+      else sessionStorage.removeItem(KEY_STORAGE);
+      if (!state.apiKey) {
+        setConn("", "Belum tersambung");
+        emptyState(el.jobsList, "API key dibutuhkan", "Masukkan X-API-Key lalu tekan Simpan.");
+        emptyState(el.leadsBody, "Belum ada prospek", "Pilih job setelah API key tersimpan.");
+        el.jobsSummary.textContent = "—";
+        el.csvLink.hidden = true;
+        return;
+      }
+      loadJobs();
+    }
+
+    function bindEvents() {
+      el.keySave.addEventListener("click", saveKey);
+      el.keyInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          saveKey();
+        }
+      });
+
+      el.keyword.addEventListener("input", () => el.keyword.removeAttribute("aria-invalid"));
+      el.maxResults.addEventListener("input", updateResultsHint);
+      el.location.addEventListener("input", () => el.location.removeAttribute("aria-invalid"));
+      el.submit.addEventListener("click", submitJob);
+      el.refreshJobs.addEventListener("click", loadJobs);
+
+      el.tokenCheck.addEventListener("click", () => checkToken(true));
+      el.tokenClear.addEventListener("click", clearToken);
+      el.apifyToken.addEventListener("input", () => {
+        updateTokenHint();
+        // Token berubah: status lama tidak lagi mewakili isi kolom.
+        state.tokenInfo = null;
+        resetTokenMeter();
+        if (!el.apifyToken.value.trim()) setTokenStatus("", "Memakai token dari server (.env) bila ada.");
+        else setTokenStatus("", "Tekan Periksa untuk memvalidasi token.");
+      });
+      el.apifyToken.addEventListener("paste", () => {
+        window.setTimeout(updateTokenHint, 0);
+      });
+
+      el.leadSearch.addEventListener("input", renderLeads);
+      el.leadFilter.addEventListener("change", renderLeads);
+      el.leadSort.addEventListener("change", renderLeads);
+
+      el.csvLink.addEventListener("click", (event) => {
+        if (!state.selectedId) {
+          event.preventDefault();
+          return;
+        }
+        // <a download> tidak bisa mengirim header, jadi unduh via fetch lalu simpan blob.
+        event.preventDefault();
+        downloadCsv(state.selectedId);
+      });
+    }
+
+    async function downloadCsv(jobId) {
+      try {
+        const response = await fetch(`${API}/jobs/${encodeURIComponent(jobId)}/leads.csv`, {
+          headers: { "X-API-Key": state.apiKey },
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null);
+          throw failure(describeError(response.status, payload), { status: response.status });
+        }
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `leads-${jobId}.csv`;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+        toast("CSV diunduh.");
+      } catch (error) {
+        toast(error.message, true);
+      }
+    }
+
+    async function bootstrap() {
+      bindEvents();
+      updateResultsHint();
+      updateTokenHint();
+      emptyState(el.jobsList, "API key dibutuhkan", "Masukkan X-API-Key lalu tekan Simpan untuk memuat riwayat job.");
+      emptyState(el.leadsBody, "Belum ada prospek", "Pilih job untuk melihat daftar prospeknya.");
+
+      if (state.apifyToken) {
+        el.apifyToken.value = state.apifyToken;
+        updateTokenHint();
+      } else {
+        setTokenStatus("", "Memakai token dari server (.env) bila ada.");
+        resetTokenMeter();
+      }
+
+      if (state.apiKey) {
+        el.keyInput.value = state.apiKey;
+        await loadJobs();
+        if (state.apifyToken) await checkToken(false);
+      } else {
+        el.keyInput.focus();
+      }
+    }
+
+    bootstrap();
+  </script>
+</body>
+</html>

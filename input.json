@@ -1,10 +1,6 @@
 {
   "searchStringsArray": [
-    "villa management",
-    "natural restaurant",
-    "eco-friendly cafe",
-    "natural home decor store",
-    "interior design store"
+    "coffee shop"
   ],
   "locationQuery": "Ubud, Bali, Indonesia",
   "maxCrawledPlacesPerSearch": 30,
